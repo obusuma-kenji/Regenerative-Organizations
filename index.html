@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>インタラクティブ・レポート：リジェネラティブな組織</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Calm Harmony (Warm Neutrals with Muted Green/Blue Accents) -->
+    <!-- Application Structure Plan: レポートの線形的な構成を再設計し、ユーザーが概念を段階的に深く理解できるテーマ別の対話型構造を採用。1) 基本概念の比較から始め(サステナブルvsリジェネラティブ)、2) 中核となる原則をカード形式で探求させ、3) 組織の進化段階を視覚的なダイアグラムで示し、4) 実践事例をタブで切り替え、5) 変革へのロードマップをステップ形式で提示。この流れは、抽象的な概念から具体的な行動へとユーザーの理解を導き、情報の消化と定着を最大化することを目的とする。 -->
+    <!-- Visualization & Content Choices: 
+        - サステナビリティ vs リジェネラティブ (Goal: Compare): トグルスイッチとテキスト更新で両者の違いを明確化。HTML/CSSで実装。
+        - 4つのパラダイム (Goal: Organize/Change): 段階的な進化を示すため、インタラクティブなステップダイアグラムを採用。JSでクリック時の表示切替を制御。Chart.jsよりもデザインの自由度が高いカスタムHTML/CSSを選択。
+        - 7つの第一原則 (Goal: Organize): グリッドレイアウトのカード形式で提示。クリックで詳細情報を表示し、能動的な学習を促進。
+        - ユニリーバのインパクト (Goal: Inform): 定量データをChart.jsの棒グラフで可視化し、成果を直感的に伝える。
+        - 変革ロードマップ (Goal: Organize): 7つのフェーズを縦型のステップコンポーネントで表現し、プロセスの流れを分かりやすくする。
+        - 評価指標 (Goal: Organize): 複雑な表をアコーディオン形式に変換。「生態学的」「社会的」「経済的」のカテゴリをクリックで展開させ、情報へのアクセス性を高める。
+        - 全てにおいて、SVG/Mermaidは不使用。 -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            background-color: #FDFBF8; /* Warm Neutral */
+            color: #38332E;
+        }
+        .font-jp {
+            font-family: 'Noto Sans JP', sans-serif;
+        }
+        .active-nav {
+            color: #15803d; /* Green-700 */
+            border-bottom: 2px solid #15803d;
+        }
+        .inactive-nav {
+            color: #6b7280; /* Gray-500 */
+            border-bottom: 2px solid transparent;
+        }
+        .paradigm-step {
+            transition: all 0.3s ease;
+            border-left-width: 4px;
+        }
+        .paradigm-step.active {
+            background-color: #f0fdf4; /* Green-50 */
+            border-color: #22c55e; /* Green-500 */
+        }
+        .principle-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .principle-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        .tab-button.active {
+            background-color: #166534; /* Green-800 */
+            color: white;
+        }
+        .roadmap-step.active .step-circle {
+            background-color: #166534; /* Green-800 */
+            color: white;
+        }
+        .roadmap-step.active .step-title {
+            color: #166534; /* Green-800 */
+        }
+        .accordion-header {
+            transition: background-color 0.2s ease;
+        }
+        .accordion-header:hover {
+            background-color: #FEF3C7; /* Amber-200 */
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-white/80 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-4">
+            <div class="flex items-center justify-between h-16">
+                <h1 class="text-xl md:text-2xl font-bold text-green-800 font-jp">リジェネラティブな組織</h1>
+                <div class="hidden md:flex space-x-6 text-sm font-medium">
+                    <a href="#concept" class="inactive-nav hover:text-green-700 transition-colors duration-300 py-1">概念</a>
+                    <a href="#principles" class="inactive-nav hover:text-green-700 transition-colors duration-300 py-1">原則</a>
+                    <a href="#journey" class="inactive-nav hover:text-green-700 transition-colors duration-300 py-1">進化の旅</a>
+                    <a href="#cases" class="inactive-nav hover:text-green-700 transition-colors duration-300 py-1">実践例</a>
+                    <a href="#roadmap" class="inactive-nav hover:text-green-700 transition-colors duration-300 py-1">ロードマップ</a>
+                    <a href="#metrics" class="inactive-nav hover:text-green-700 transition-colors duration-300 py-1">測定指標</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-4 py-8 md:py-12">
+
+        <section id="hero" class="text-center py-16">
+            <h2 class="text-4xl md:text-5xl font-extrabold tracking-tight font-jp">持続可能性の、その先へ。</h2>
+            <p class="mt-4 text-lg md:text-xl max-w-3xl mx-auto text-gray-600 font-jp">
+                リジェネラティブな組織とは、単に害を減らすのではなく、関わる全ての生命をより豊かに再生させる、未来の組織像です。
+            </p>
+        </section>
+
+        <div class="space-y-20 md:space-y-28">
+
+            <section id="concept">
+                <div class="text-center mb-12">
+                    <h3 class="text-3xl font-bold font-jp">概念の核心</h3>
+                    <p class="mt-2 text-gray-600 font-jp">サステナビリティとリジェネレーション、その決定的な違いとは何か。</p>
+                </div>
+                <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-8">
+                    <div class="flex items-center justify-center space-x-4 mb-6">
+                        <span id="label-sustain" class="font-bold text-lg text-gray-400">サステナブル</span>
+                        <label for="concept-toggle" class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" value="" id="concept-toggle" class="sr-only peer">
+                            <div class="w-14 h-8 bg-blue-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-1 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-600"></div>
+                        </label>
+                        <span id="label-regen" class="font-bold text-lg text-green-700">リジェネラティブ</span>
+                    </div>
+                    <div id="concept-display" class="text-center transition-all duration-500">
+                    </div>
+                </div>
+            </section>
+
+            <section id="principles">
+                <div class="text-center mb-12">
+                    <h3 class="text-3xl font-bold font-jp">生命系から学ぶ７つの原則</h3>
+                    <p class="mt-2 text-gray-600 font-jp">リジェネラティブな組織の思考と行動を導く、キャロル・サンフォードの第一原則。</p>
+                </div>
+                <div id="principles-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                </div>
+                <div id="principle-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden items-center justify-center p-4">
+                    <div class="bg-white rounded-lg shadow-2xl max-w-2xl w-full p-6 relative animate-fade-in">
+                        <button id="modal-close" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+                        <h4 id="modal-title" class="text-2xl font-bold text-green-800 mb-4"></h4>
+                        <p id="modal-description" class="text-gray-700"></p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="journey">
+                <div class="text-center mb-12">
+                    <h3 class="text-3xl font-bold font-jp">組織の進化の旅</h3>
+                    <p class="mt-2 text-gray-600 font-jp">あなたの組織は、４つのパラダイムのどこに位置していますか？</p>
+                </div>
+                <div class="flex flex-col md:flex-row gap-8 max-w-6xl mx-auto">
+                    <div id="paradigm-steps" class="w-full md:w-1/3 space-y-2">
+                    </div>
+                    <div id="paradigm-details" class="w-full md:w-2/3 bg-white rounded-xl shadow-lg p-8 min-h-[250px]">
+                    </div>
+                </div>
+            </section>
+
+            <section id="cases">
+                <div class="text-center mb-12">
+                    <h3 class="text-3xl font-bold font-jp">実践とインパクト</h3>
+                    <p class="mt-2 text-gray-600 font-jp">理論を現実に変える、国内外のパイオニアたちの事例。</p>
+                </div>
+                <div class="max-w-5xl mx-auto">
+                    <div class="flex justify-center mb-6 border-b border-gray-200">
+                        <button data-tab="global" class="tab-button px-6 py-3 text-lg font-medium rounded-t-lg transition-colors duration-300">グローバル</button>
+                        <button data-tab="japan" class="tab-button px-6 py-3 text-lg font-medium rounded-t-lg transition-colors duration-300">日本</button>
+                    </div>
+                    <div id="cases-content" class="bg-white rounded-b-xl shadow-lg p-8">
+                    </div>
+                </div>
+            </section>
+
+            <section id="roadmap">
+                <div class="text-center mb-12">
+                    <h3 class="text-3xl font-bold font-jp">変革へのロードマップ</h3>
+                    <p class="mt-2 text-gray-600 font-jp">リジェネラティブな組織への移行を導く７つのフェーズ。</p>
+                </div>
+                <div id="roadmap-container" class="max-w-3xl mx-auto">
+                </div>
+            </section>
+            
+            <section id="metrics">
+                <div class="text-center mb-12">
+                    <h3 class="text-3xl font-bold font-jp">新しい価値の測定</h3>
+                    <p class="mt-2 text-gray-600 font-jp">従来の財務指標を超えて、真のインパクトを可視化する。</p>
+                </div>
+                <div id="metrics-accordion" class="max-w-4xl mx-auto space-y-3">
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <footer class="bg-gray-800 text-white mt-20">
+        <div class="container mx-auto px-4 py-8 text-center">
+            <p class="font-jp">リジェネラティブな組織は、未来を創造する新しいリーダーシップの形です。</p>
+            <p class="text-sm text-gray-400 mt-2">このインタラクティブ・レポートは提供された資料に基づき生成されました。</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const data = {
+                concepts: {
+                    sustain: {
+                        title: 'サステナブル（持続可能）',
+                        goal: '害を減らす (Do Less Harm)',
+                        description: '資源の消費を抑え、汚染を減らし、現状を維持しようとします。地球への負荷をゼロに近づける「ニュートラル」な状態が理想です。',
+                        icon: '📉'
+                    },
+                    regen: {
+                        title: 'リジェネラティブ（再生的）',
+                        goal: 'より多くの善をなす (Do More Good)',
+                        description: '事業活動を通じて、疲弊した生態系や地域コミュニティ、従業員のウェルビーイングを、事業開始前よりも健全で豊かな状態へと「再生」させることを目的とします。「ネット・ポジティブ」な状態が理想です。',
+                        icon: '🌱'
+                    }
+                },
+                principles: [
+                    { title: '全体性', description: '組織を個別の部品の集合ではなく、全てが相互に依存し合う一つの生命システムとして捉えます。システム全体の健康を追求します。' },
+                    { title: 'ポテンシャル', description: '汎用的な基準に合わせるのではなく、それぞれの生命体が持つ唯一無二の「本質」と「潜在能力」に焦点を当てます。' },
+                    { title: '相互依存性', description: '競争ではなく、相互に与え合う互恵的な関係が生命システムの自然な状態であると認識します。' },
+                    { title: '本質', description: '全ての生命体やシステムが持つ、独自のアイデンティティや中核的な目的を理解し、そこから働きかけます。' },
+                    { title: 'ネストされたシステム', description: '全ての生命システムは、より大きなシステムの中に入れ子状に存在していると理解します（例：チームは企業の中に、企業は生態系の中に）。' },
+                    { title: '結節点への介入', description: 'システム全体に影響を与える「ツボ」や「結節点」を見極め、最小の力で最大の変化を生み出すアプローチです。' },
+                    { title: '発達的アプローチ', description: '他者を操作するのではなく、それぞれの生命体が自己の方向性に従って成長し、能力を進化させることを支援します。' }
+                ],
+                paradigms: [
+                    { title: '価値の抽出', subtitle: '自己の利益のために資源を搾取する', description: '地球や他者を自己の利益のための資源とみなし、権力者の権威に基づいて価値を一方的に引き出す、最も基本的なパラダイムです。' },
+                    { title: '無秩序の抑制', subtitle: '問題解決と管理で秩序を維持する', description: '理想状態からの逸脱（＝問題）を特定し、科学的な手法やルール、管理によってそれを修正し、秩序を維持しようとします。従来の品質管理などがこれにあたります。' },
+                    { title: '善行', subtitle: '道徳に基づき、良い変化を目指す', description: '道徳的な羅針盤に基づき、世界に良い変化をもたらそうとするパラダイム。企業の社会的責任（CSR）や多くのサステナビリティ活動がここに属します。' },
+                    { title: '能力の進化／生命の再生', subtitle: '全ての生命のポテンシャルを解放する', description: '問題解決や善行を超え、関わる全ての生命システムが持つ固有のポテンシャルを発揮させ、進化させることに焦点を当てます。世界を見るレンズそのものを変える質的な飛躍です。' }
+                ],
+                cases: {
+                    global: `
+                        <div class="space-y-8">
+                            <div>
+                                <h4 class="text-xl font-bold text-green-800">ユニリーバ：サプライチェーンの再生</h4>
+                                <p class="mt-2 text-gray-600">広大な農業サプライチェーンをリジェネラティブなものへ転換。10億ユーロ規模の基金を設立し、2030年までに100万ヘクタールの農地での実践を目指します。スペインのトマト栽培プロジェクトでは、具体的な成果が報告されています。</p>
+                                <div class="chart-container mt-4">
+                                    <canvas id="unilever-chart"></canvas>
+                                </div>
+                                <p class="text-xs text-center text-gray-500 mt-2">スペイン・バダホス地方のトマト栽培プロジェクトにおける成果</p>
+                            </div>
+                            <div>
+                                <h4 class="text-xl font-bold text-green-800">パタゴニア：認証制度による市場創造</h4>
+                                <p class="mt-2 text-gray-600">「リジェネラティブ・オーガニック認証（ROC）」の設立を支援。単なる製品の作り手から、リジェネラティブという価値を定義・保証する「市場の創造者」へと役割を進化させ、業界全体の基準を変革しようとしています。</p>
+                            </div>
+                             <div>
+                                <h4 class="text-xl font-bold text-green-800">ラッシュ：エコシステムへの投資</h4>
+                                <p class="mt-2 text-gray-600">原材料調達を通じて生態系再生に貢献する「リジェネラティブな購買」と、利益の一部を原資に世界中の再生プロジェクトを支援する「Lush Spring Prize」を組み合わせ、ムーブメント全体を育む「触媒」としての役割を果たしています。</p>
+                            </div>
+                        </div>
+                    `,
+                    japan: `
+                        <div class="space-y-8">
+                            <div>
+                                <h4 class="text-xl font-bold text-green-800">グリーン・ワイズ：「0次産業」としてのデザイン</h4>
+                                <p class="mt-2 text-gray-600">事業を「0次産業」（1次産業の基盤となる自然・文化資本を再生する産業）と定義。人と自然の関係性を再構築し、剪定枝を堆肥に、フジの蔓を照明器具にするなど、サーキュラーエコノミーを体現しています。</p>
+                            </div>
+                            <div>
+                                <h4 class="text-xl font-bold text-green-800">上勝町ゼロ・ウェイストセンター：地域社会の再生</h4>
+                                <p class="mt-2 text-gray-600">リサイクル率80%以上を達成した地域ぐるみの取り組み。一方で、高齢化社会での分別の負担や、リサイクルできない製品の存在など、システム全体で解決すべき現実的な課題も浮き彫りにしています。</p>
+                            </div>
+                             <div>
+                                <h4 class="text-xl font-bold text-green-800">製造業：産業への原則の適用</h4>
+                                <p class="mt-2 text-gray-600">東芝の「リジェネラティブ・イノベーション・センター」設立や、東レ、三井化学、花王によるリサイクル素材・技術の開発など、日本の製造業においてもリジェネラティブな思想を取り入れる動きが広がっています。</p>
+                            </div>
+                        </div>
+                    `
+                },
+                roadmap: [
+                    { title: '生命システム・マインドセットの導入', description: 'リーダーシップチームが、組織の世界観を機械論から生命システム論へと転換させるための学習と対話を行います。' },
+                    { title: 'システム分析の実施', description: '自社が関わるエコシステム全体をマッピングし、全てのステークホルダーとシステムの構造を理解します。' },
+                    { title: 'リジェネラティブなビジョンの設定', description: '「害を減らす」から「善をなす」へ転換し、自社が再生したいポジティブな価値を明確に定義します。' },
+                    { title: 'ステークホルダーとの共創', description: '従業員、顧客、地域社会などを意思決定のプロセスに巻き込み、共に価値を創造するパートナーと見なします。' },
+                    { title: 'オペレーションと文化の再設計', description: 'サーキュラーエコノミーの原則を適用し、廃棄物を生まないプロセスを設計。同時に、ティール組織の原則を導入し、従業員の主体性を解放します。' },
+                    { title: '人的資本と自然資本への投資', description: '従業員の学習と成長の機会に投資すると同時に、自然システムの回復と強化に直接投資します。' },
+                    { title: '測定と適応', description: 'リジェネラティブなインパクトを追跡する新たな指標群を導入し、そのフィードバックに基づいて継続的に学習し、戦略を適応させます。' }
+                ],
+                metrics: [
+                    { 
+                        dimension: '生態学的インパクト 🏞️', 
+                        content: `
+                            <ul class="list-disc pl-5 space-y-2 text-gray-600">
+                                <li><strong>土壌・土地の健康:</strong> 土壌有機物の増加率、水の浸透率、化学肥料・農薬使用量の削減量など。</li>
+                                <li><strong>生物多様性:</strong> 鳥類や受粉媒介者などの種の多様性指数、非生産的な生息地（野草帯など）の割合。</li>
+                                <li><strong>気候・炭素:</strong> 正味のGHG収支（隔離量 vs 排出量）、再生可能エネルギーの使用率。</li>
+                            </ul>`
+                    },
+                    { 
+                        dimension: '社会的インパクト 👨‍👩‍👧‍👦', 
+                        content: `
+                            <ul class="list-disc pl-5 space-y-2 text-gray-600">
+                                <li><strong>従業員のウェルビーイングと発達:</strong> 満足度を超える「ネット・スライビング・スコア」、研修投資額、心理的安全性。</li>
+                                <li><strong>コミュニティと社会的公正:</strong> 地域からの調達率、生活賃金比率、コミュニティプロジェクトへの投資額。</li>
+                                <li><strong>ステークホルダーとの関係性:</strong> サプライヤーとの長期契約や共同投資など、パートナーシップの質。</li>
+                            </ul>`
+                    },
+                    { 
+                        dimension: '経済的インパクト 💰', 
+                        content: `
+                            <ul class="list-disc pl-5 space-y-2 text-gray-600">
+                                <li><strong>長期的な価値創造:</strong> リジェネラティブな製品・サービスからの収益、顧客生涯価値（LTV）、社会的投資収益率（SROI）。</li>
+                                <li><strong>レジリエンスと適応性:</strong> サプライチェーンの多様性指数、不安定なコモディティへの依存度削減率、イノベーションの試行率。</li>
+                            </ul>`
+                    }
+                ]
+            };
+
+            const conceptToggle = document.getElementById('concept-toggle');
+            const conceptDisplay = document.getElementById('concept-display');
+            const labelSustain = document.getElementById('label-sustain');
+            const labelRegen = document.getElementById('label-regen');
+
+            function updateConcept(isRegen) {
+                const concept = isRegen ? data.concepts.regen : data.concepts.sustain;
+                conceptDisplay.innerHTML = `
+                    <h4 class="text-3xl font-bold mb-2 transition-colors duration-300 ${isRegen ? 'text-green-700' : 'text-blue-600'}">${concept.icon} ${concept.title}</h4>
+                    <p class="text-xl font-semibold text-gray-800 mb-3">${concept.goal}</p>
+                    <p class="text-gray-600 max-w-xl mx-auto">${concept.description}</p>
+                `;
+                labelSustain.classList.toggle('text-gray-400', isRegen);
+                labelSustain.classList.toggle('text-blue-600', !isRegen);
+                labelRegen.classList.toggle('text-gray-400', !isRegen);
+                labelRegen.classList.toggle('text-green-700', isRegen);
+            }
+
+            conceptToggle.addEventListener('change', (e) => {
+                updateConcept(e.target.checked);
+            });
+            updateConcept(true);
+            conceptToggle.checked = true;
+
+            const principlesGrid = document.getElementById('principles-grid');
+            data.principles.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'principle-card bg-white rounded-lg shadow-md p-6 cursor-pointer';
+                card.innerHTML = `<h4 class="text-lg font-bold text-gray-800">${p.title}</h4>`;
+                card.addEventListener('click', () => showPrincipleModal(p.title, p.description));
+                principlesGrid.appendChild(card);
+            });
+
+            const modal = document.getElementById('principle-modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalDescription = document.getElementById('modal-description');
+            const modalClose = document.getElementById('modal-close');
+
+            function showPrincipleModal(title, description) {
+                modalTitle.textContent = title;
+                modalDescription.textContent = description;
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+
+            function hidePrincipleModal() {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+            modalClose.addEventListener('click', hidePrincipleModal);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    hidePrincipleModal();
+                }
+            });
+
+            const paradigmStepsContainer = document.getElementById('paradigm-steps');
+            const paradigmDetailsContainer = document.getElementById('paradigm-details');
+            data.paradigms.forEach((p, index) => {
+                const step = document.createElement('div');
+                step.className = 'paradigm-step p-4 rounded-lg cursor-pointer border-l-gray-200 hover:bg-gray-50';
+                step.dataset.index = index;
+                step.innerHTML = `
+                    <p class="font-bold text-gray-900">${p.title}</p>
+                    <p class="text-sm text-gray-500">${p.subtitle}</p>
+                `;
+                paradigmStepsContainer.appendChild(step);
+            });
+            
+            const paradigmSteps = document.querySelectorAll('.paradigm-step');
+            function updateParadigmDetails(index) {
+                const paradigm = data.paradigms[index];
+                paradigmDetailsContainer.innerHTML = `
+                    <h4 class="text-2xl font-bold text-green-800 mb-3">${paradigm.title}</h4>
+                    <p class="text-lg font-semibold text-gray-700 mb-4">${paradigm.subtitle}</p>
+                    <p class="text-gray-600">${paradigm.description}</p>
+                `;
+                paradigmSteps.forEach((step, i) => {
+                    step.classList.toggle('active', i === index);
+                });
+            }
+
+            paradigmStepsContainer.addEventListener('click', (e) => {
+                const step = e.target.closest('.paradigm-step');
+                if (step) {
+                    updateParadigmDetails(parseInt(step.dataset.index));
+                }
+            });
+            updateParadigmDetails(3);
+
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const casesContent = document.getElementById('cases-content');
+            
+            function updateCasesTab(tab) {
+                tabButtons.forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.tab === tab);
+                    btn.classList.toggle('bg-transparent', btn.dataset.tab !== tab);
+                    btn.classList.toggle('text-gray-500', btn.dataset.tab !== tab);
+                });
+                casesContent.innerHTML = data.cases[tab];
+
+                if (tab === 'global') {
+                    const ctx = document.getElementById('unilever-chart').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: ['GHG排出量', '土壌有機物', '受粉媒介者'],
+                            datasets: [{
+                                label: '変化率 (%)',
+                                data: [-37, 1.27, 173],
+                                backgroundColor: [
+                                    'rgba(239, 68, 68, 0.6)', // Red for reduction
+                                    'rgba(34, 197, 94, 0.6)', // Green for increase
+                                    'rgba(59, 130, 246, 0.6)'  // Blue for increase
+                                ],
+                                borderColor: [
+                                    'rgba(239, 68, 68, 1)',
+                                    'rgba(34, 197, 94, 1)',
+                                    'rgba(59, 130, 246, 1)'
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            indexAxis: 'y',
+                            plugins: {
+                                legend: { display: false },
+                                title: { display: true, text: 'ユニリーバのプロジェクト成果', font: { size: 16, family: "'Noto Sans JP', sans-serif" } },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            return `${context.dataset.label}: ${context.raw}%`;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    title: { display: true, text: '変化率 (%)' }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+            
+            tabButtons.forEach(btn => {
+                btn.addEventListener('click', () => updateCasesTab(btn.dataset.tab));
+            });
+            updateCasesTab('global');
+
+            const roadmapContainer = document.getElementById('roadmap-container');
+            data.roadmap.forEach((item, index) => {
+                const stepDiv = document.createElement('div');
+                stepDiv.className = 'roadmap-step relative flex items-start space-x-4 pb-8';
+                if (index < data.roadmap.length - 1) {
+                    stepDiv.classList.add('border-l-2', 'border-gray-300', 'ml-4');
+                } else {
+                    stepDiv.classList.add('ml-4');
+                }
+                stepDiv.innerHTML = `
+                    <div class="step-circle absolute -left-4 top-0 w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-bold transition-colors duration-300">${index + 1}</div>
+                    <div class="pl-8">
+                        <h4 class="step-title text-lg font-bold text-gray-800 transition-colors duration-300">${item.title}</h4>
+                        <p class="mt-1 text-gray-600">${item.description}</p>
+                    </div>
+                `;
+                roadmapContainer.appendChild(stepDiv);
+            });
+
+            const roadmapSteps = document.querySelectorAll('.roadmap-step');
+            function activateRoadmapStep(index) {
+                roadmapSteps.forEach((step, i) => {
+                    step.classList.toggle('active', i <= index);
+                });
+            }
+            let currentRoadmapStep = 0;
+            activateRoadmapStep(currentRoadmapStep);
+            setInterval(() => {
+                currentRoadmapStep = (currentRoadmapStep + 1) % data.roadmap.length;
+                activateRoadmapStep(currentRoadmapStep);
+            }, 3000);
+
+            const metricsAccordion = document.getElementById('metrics-accordion');
+            data.metrics.forEach(metric => {
+                const item = document.createElement('div');
+                item.className = 'bg-white rounded-lg shadow-md overflow-hidden';
+                item.innerHTML = `
+                    <div class="accordion-header cursor-pointer p-5 flex justify-between items-center">
+                        <h4 class="text-xl font-semibold text-gray-800">${metric.dimension}</h4>
+                        <span class="transform transition-transform duration-300">▼</span>
+                    </div>
+                    <div class="accordion-content hidden p-5 border-t border-gray-200">
+                        ${metric.content}
+                    </div>
+                `;
+                metricsAccordion.appendChild(item);
+            });
+
+            metricsAccordion.addEventListener('click', (e) => {
+                const header = e.target.closest('.accordion-header');
+                if (header) {
+                    const content = header.nextElementSibling;
+                    const icon = header.querySelector('span');
+                    content.classList.toggle('hidden');
+                    icon.classList.toggle('rotate-180');
+                }
+            });
+
+            const navLinks = document.querySelectorAll('header nav a');
+            const sections = document.querySelectorAll('main section');
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        navLinks.forEach(link => {
+                            link.classList.toggle('active-nav', link.getAttribute('href').substring(1) === entry.target.id);
+                            link.classList.toggle('inactive-nav', link.getAttribute('href').substring(1) !== entry.target.id);
+                        });
+                    }
+                });
+            }, { rootMargin: "-50% 0px -50% 0px" });
+
+            sections.forEach(section => {
+                observer.observe(section);
+            });
+            
+            navLinks.forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    document.querySelector(this.getAttribute('href')).scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                });
+            });
+
+        });
+    </script>
+</body>
+</html>
